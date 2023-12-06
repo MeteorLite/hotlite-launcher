@@ -74,7 +74,8 @@ import java.util.function.IntConsumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
+
 import joptsimple.OptionException;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -95,6 +96,10 @@ public class Launcher
 	private static final String USER_AGENT = "RuneLite/" + LauncherProperties.getVersion();
 	static final String LAUNCHER_EXECUTABLE_NAME_WIN = "RuneLite.exe";
 	static final String LAUNCHER_EXECUTABLE_NAME_OSX = "RuneLite";
+
+	private static final File HOTLITE_DIR = new File(RUNELITE_DIR, "hotlite");
+	public static String rlVersion;
+	public static File hotlitePatchDir;
 
 	public static void main(String[] args)
 	{
@@ -189,6 +194,9 @@ public class Launcher
 					.split(classpathOpt))
 					.map(name -> new File(REPO_DIR, name))
 					.collect(Collectors.toList());
+
+				classpathSwap(classpath, options, false);
+
 				try
 				{
 					ReflectionLauncher.launch(classpath, getClientArgs(settings));
@@ -384,6 +392,8 @@ public class Launcher
 			var classpath = artifacts.stream()
 				.map(dep -> new File(REPO_DIR, dep.getName()))
 				.collect(Collectors.toList());
+
+			classpathSwap(classpath, options, true);
 
 			List<String> jvmParams = new ArrayList<>();
 			// Set hs_err_pid location. This is a jvm param and can't be set at runtime.
@@ -935,4 +945,34 @@ public class Launcher
 	private static native void setBlacklistedDlls(String[] dlls);
 
 	static native String regQueryString(String subKey, String value);
+
+	public static void classpathSwap(List<File> classpath, OptionSet options, boolean checkClassPathOption) {
+		if (rlVersion == null) {
+			log.info("HotLite Launcher " + LauncherProperties.getVersion());
+			rlVersion = classpath.stream().filter(artifact -> (artifact.getName().startsWith("client-") && !artifact.getName().contains("client-patch"))).findFirst().map(artifact -> artifact.getName().replace("client-", "").replace(".jar", "")).orElse("");
+			log.info("RL version: " + rlVersion);
+			hotlitePatchDir = new File(HOTLITE_DIR, rlVersion);
+		}
+
+		if (hotlitePatchDir.exists()) {
+			log.info("HotLite swapping");
+			ArrayList<File> swaps = new ArrayList<>();
+			classpath.forEach(file -> {
+				log.info(file.getName());
+				if (file.getName().contains("runelite-api")) {
+					swaps.add(file);
+				}
+				if (file.getName().equals("client-"+rlVersion+".jar")) {
+					System.out.println(file.getName());
+					swaps.add(file);
+				}
+			});
+			swaps.forEach(classpath::remove);
+			classpath.addAll(List.of(Objects.requireNonNull(hotlitePatchDir.listFiles())));
+		} else  {
+			if (checkClassPathOption && !options.has("classpath"))
+				JOptionPane.showMessageDialog(new JFrame("HotLite"), "No HotLite found for RuneLite " + rlVersion + "\n" +
+						"Running RuneLite");
+		}
+	}
 }
