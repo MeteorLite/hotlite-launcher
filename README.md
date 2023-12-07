@@ -1,4 +1,10 @@
 ![](https://runelite.net/img/logo.png)
+# hotlite-launcher  
+  
+This version of the launcher is designed to swap jar files on the classpath.
+
+Enabling you to use your own client builds with the RuneLite / Jagex launcher with ease.
+
 # launcher [![Discord](https://img.shields.io/discord/301497432909414422.svg)](https://discord.gg/mePCs8U)
 
 This repository holds the launcher for the [RuneLite client](https://github.com/runelite/runelite).
