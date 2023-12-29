@@ -55,7 +55,7 @@ public class SplashScreen extends JFrame implements ActionListener
 	private static final int WIDTH = 200;
 	private static final int PAD = 10;
 
-	private static SplashScreen INSTANCE;
+	public static SplashScreen INSTANCE;
 
 	private final JLabel action = new JLabel("Loading");
 	private final JProgressBar progress = new JProgressBar();
@@ -63,7 +63,7 @@ public class SplashScreen extends JFrame implements ActionListener
 	private final Timer timer;
 
 	private volatile double overallProgress = 0;
-	private volatile String actionText = "Loading";
+	public volatile String actionText = "Loading";
 	private volatile String subActionText = "";
 	private volatile String progressText = null;
 

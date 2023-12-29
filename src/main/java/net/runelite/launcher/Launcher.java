@@ -37,17 +37,12 @@ import com.google.common.hash.Hashing;
 import com.google.common.hash.HashingOutputStream;
 import com.google.common.io.ByteStreams;
 import com.google.gson.Gson;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+
+import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
@@ -85,6 +80,8 @@ import net.runelite.launcher.beans.Bootstrap;
 import net.runelite.launcher.beans.Diff;
 import net.runelite.launcher.beans.Platform;
 import org.slf4j.LoggerFactory;
+
+import static net.runelite.launcher.SplashScreen.INSTANCE;
 
 @Slf4j
 public class Launcher
@@ -946,7 +943,51 @@ public class Launcher
 
 	static native String regQueryString(String subKey, String value);
 
-	public static void classpathSwap(List<File> classpath, OptionSet options, boolean checkClassPathOption) {
+	private static int getFileSize(URL url) {
+		URLConnection conn = null;
+		try {
+			conn = url.openConnection();
+			if(conn instanceof HttpURLConnection) {
+				((HttpURLConnection)conn).setRequestMethod("HEAD");
+			}
+			conn.getInputStream();
+			return conn.getContentLength();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		} finally {
+			if(conn instanceof HttpURLConnection) {
+				((HttpURLConnection)conn).disconnect();
+			}
+		}
+	}
+
+	public static void updateKotlinSTD() throws IOException {
+		URL stdJarURL = new URL("https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/1.9.22/kotlin-stdlib-1.9.22.jar");
+		File localStdJar = new File(hotlitePatchDir, "kotlin-stdlib-1.9.22.jar");
+		boolean shouldUpdate = true;
+		if (localStdJar.exists()) {
+			long remoteJarSize = getFileSize(stdJarURL);
+			long localFileSize = localStdJar.length();
+			if (remoteJarSize == localFileSize)
+				shouldUpdate = false;
+		}
+
+		if (shouldUpdate) {
+			INSTANCE.actionText = "Updating Kotlin STD lib";
+			try (BufferedInputStream in = new BufferedInputStream(stdJarURL.openStream());
+				 FileOutputStream fileOutputStream = new FileOutputStream(localStdJar)) {
+				byte[] dataBuffer = new byte[1024];
+				int bytesRead;
+				while ((bytesRead = in.read(dataBuffer, 0, 1024)) != -1) {
+					fileOutputStream.write(dataBuffer, 0, bytesRead);
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	public static void classpathSwap(List<File> classpath, OptionSet options, boolean checkClassPathOption) throws IOException {
 		if (rlVersion == null) {
 			log.info("HotLite Launcher " + LauncherProperties.getVersion());
 			rlVersion = classpath.stream().filter(artifact -> (artifact.getName().startsWith("client-") && !artifact.getName().contains("client-patch"))).findFirst().map(artifact -> artifact.getName().replace("client-", "").replace(".jar", "")).orElse("");
@@ -955,6 +996,7 @@ public class Launcher
 		}
 
 		if (hotlitePatchDir.exists()) {
+			updateKotlinSTD();
 			log.info("HotLite swapping");
 			ArrayList<File> swaps = new ArrayList<>();
 			classpath.forEach(file -> {
