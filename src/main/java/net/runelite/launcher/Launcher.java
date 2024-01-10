@@ -42,7 +42,6 @@ import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
@@ -81,8 +80,6 @@ import net.runelite.launcher.beans.Diff;
 import net.runelite.launcher.beans.Platform;
 import org.slf4j.LoggerFactory;
 
-import static net.runelite.launcher.SplashScreen.INSTANCE;
-
 @Slf4j
 public class Launcher
 {
@@ -95,11 +92,12 @@ public class Launcher
 	static final String LAUNCHER_EXECUTABLE_NAME_OSX = "RuneLite";
 
 	private static final File HOTLITE_DIR = new File(RUNELITE_DIR, "hotlite");
+
+	private static final File LIBS_DIR = new File(HOTLITE_DIR, "libs");
 	public static String rlVersion;
 	public static File hotlitePatchDir;
 
-	public static void main(String[] args)
-	{
+	public static void main(String[] args) throws IOException {
 		OptionParser parser = new OptionParser(false);
 		parser.allowsUnrecognizedOptions();
 		parser.accepts("postinstall", "Perform post-install tasks");
@@ -192,6 +190,7 @@ public class Launcher
 					.map(name -> new File(REPO_DIR, name))
 					.collect(Collectors.toList());
 
+				updateLibs();
 				classpathSwap(classpath, options, false);
 
 				try
@@ -389,7 +388,7 @@ public class Launcher
 			var classpath = artifacts.stream()
 				.map(dep -> new File(REPO_DIR, dep.getName()))
 				.collect(Collectors.toList());
-
+			updateLibs();
 			classpathSwap(classpath, options, true);
 
 			List<String> jvmParams = new ArrayList<>();
@@ -963,19 +962,22 @@ public class Launcher
 
 	public static void updateKotlinSTD() throws IOException {
 		URL stdJarURL = new URL("https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/1.9.22/kotlin-stdlib-1.9.22.jar");
-		File localStdJar = new File(hotlitePatchDir, "kotlin-stdlib-1.9.22.jar");
+		File localStdJar = new File(LIBS_DIR, "kotlin-stdlib-1.9.22.jar");
+		downloadFile(stdJarURL, localStdJar);
+	}
+
+	public static void downloadFile(URL url, File file) {
 		boolean shouldUpdate = true;
-		if (localStdJar.exists()) {
-			long remoteJarSize = getFileSize(stdJarURL);
-			long localFileSize = localStdJar.length();
+		if (file.exists()) {
+			long remoteJarSize = getFileSize(url);
+			long localFileSize = file.length();
 			if (remoteJarSize == localFileSize)
 				shouldUpdate = false;
 		}
 
 		if (shouldUpdate) {
-			INSTANCE.actionText = "Updating Kotlin STD lib";
-			try (BufferedInputStream in = new BufferedInputStream(stdJarURL.openStream());
-				 FileOutputStream fileOutputStream = new FileOutputStream(localStdJar)) {
+			try (BufferedInputStream in = new BufferedInputStream(url.openStream());
+				 FileOutputStream fileOutputStream = new FileOutputStream(file)) {
 				byte[] dataBuffer = new byte[1024];
 				int bytesRead;
 				while ((bytesRead = in.read(dataBuffer, 0, 1024)) != -1) {
@@ -987,6 +989,12 @@ public class Launcher
 		}
 	}
 
+	public static void updateLibs() throws IOException {
+		if (!LIBS_DIR.exists())
+			LIBS_DIR.mkdirs();
+		updateKotlinSTD();
+	}
+
 	public static void classpathSwap(List<File> classpath, OptionSet options, boolean checkClassPathOption) throws IOException {
 		if (rlVersion == null) {
 			log.info("HotLite Launcher " + LauncherProperties.getVersion());
@@ -996,7 +1004,6 @@ public class Launcher
 		}
 
 		if (hotlitePatchDir.exists()) {
-			updateKotlinSTD();
 			log.info("HotLite swapping");
 			ArrayList<File> swaps = new ArrayList<>();
 			classpath.forEach(file -> {
@@ -1010,6 +1017,9 @@ public class Launcher
 				}
 			});
 			swaps.forEach(classpath::remove);
+			//Add libs like kotlin etc
+			classpath.addAll(List.of(LIBS_DIR.listFiles()));
+			//Add runelite module swaps
 			classpath.addAll(List.of(Objects.requireNonNull(hotlitePatchDir.listFiles())));
 		} else  {
 			if (checkClassPathOption && !options.has("classpath"))
