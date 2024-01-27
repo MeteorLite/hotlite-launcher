@@ -960,10 +960,22 @@ public class Launcher
 		}
 	}
 
-	public static void updateKotlinSTD() throws IOException {
-		URL stdJarURL = new URL("https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/1.9.22/kotlin-stdlib-1.9.22.jar");
-		File localStdJar = new File(LIBS_DIR, "kotlin-stdlib-1.9.22.jar");
-		downloadFile(stdJarURL, localStdJar);
+	public static void updateKotlin() throws IOException {
+		URL std = new URL("https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/1.9.22/kotlin-stdlib-1.9.22.jar");
+		File stdJar = new File(LIBS_DIR, "kotlin-stdlib-1.9.22.jar");
+		downloadFile(std, stdJar);
+		URL reflect = new URL("https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-reflect/1.9.22/kotlin-reflect-1.9.22.jar");
+		File reflectJar = new File(LIBS_DIR, "kotlin-reflect-1.9.22.jar");
+		downloadFile(reflect, reflectJar);
+	}
+
+	public static void updateASM() throws IOException {
+		URL asm = new URL("https://repo1.maven.org/maven2/org/ow2/asm/asm/9.6/asm-9.6.jar");
+		File asmJar = new File(LIBS_DIR, "asm-9.6.jar");
+		downloadFile(asm, asmJar);
+		URL asmUtil = new URL("https://repo1.maven.org/maven2/org/ow2/asm/asm-util/9.6/asm-util-9.6.jar");
+		File asmUtilJar = new File(LIBS_DIR, "asm-util-9.6.jar");
+		downloadFile(asmUtil, asmUtilJar);
 	}
 
 	public static void downloadFile(URL url, File file) {
@@ -992,7 +1004,8 @@ public class Launcher
 	public static void updateLibs() throws IOException {
 		if (!LIBS_DIR.exists())
 			LIBS_DIR.mkdirs();
-		updateKotlinSTD();
+		updateKotlin();
+		updateASM();
 	}
 
 	public static void classpathSwap(List<File> classpath, OptionSet options, boolean checkClassPathOption) throws IOException {
