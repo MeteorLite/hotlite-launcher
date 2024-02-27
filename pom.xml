@@ -134,7 +134,7 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<version>1.18.20</version>
+			<version>1.18.30</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
@@ -355,7 +355,7 @@
 						<lock>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok</artifactId>
-							<hash>SHA-256:ce947be6c2fbe759fbbe8ef3b42b6825f814c98c8853f1013f2d9630cedf74b0</hash>
+							<hash>SHA-256:14151b47582d570b4de16a147ece3bdbd19ace4aee5bde3a5578c87db9ecb998</hash>
 						</lock>
 						<lock>
 							<groupId>net.runelite.maven</groupId>
